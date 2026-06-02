@@ -929,34 +929,73 @@ function promoteToAdmin() {
             });
         }
 
+        // Ranks API (구글 시트 실시간 연동 버전)
         function loadRanks() {
-            let users = JSON.parse(localStorage.getItem('mock_users')) || [];
-            if(currentUser && !users.find(u => u.userId === currentUser.userId)) {
-                users.push(currentUser);
+            const tbody = document.getElementById('ranksTableBody');
+            tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> 실시간 랭킹 정보를 불러오는 중입니다...</td></tr>`;
+
+            // 1. 구글 시트 연동 주소가 있을 때 (실시간 연동 모드)
+            if (GOOGLE_SCRIPT_URL) {
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getRanks`)
+                .then(res => res.json())
+                .then(data => {
+                    renderRanksTable(data);
+                })
+                .catch(err => {
+                    console.error("랭킹 로딩 실패:", err);
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">랭킹 데이터를 불러오는데 실패했습니다.</td></tr>`;
+                });
+            } else {
+                // 2. 구글 시트 연동 주소가 없을 때 (기존 로컬 가상 모드 백업)
+                let users = JSON.parse(localStorage.getItem('mock_users')) || [];
+                if(currentUser && !users.find(u => u.userId === currentUser.userId)) {
+                    users.push(currentUser);
+                }
+                renderRanksTable(users);
             }
+        }
+
+        // 랭킹 데이터를 정렬하고 화면 표에 그려주는 공통 함수
+        function renderRanksTable(usersArray) {
+            const tbody = document.getElementById('ranksTableBody');
+            tbody.innerHTML = "";
             
+            if (!usersArray || usersArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400">등록된 유저 정보가 없습니다.</td></tr>`;
+                return;
+            }
+
+            // 고유 유저 필터링 (ID 중복 제거)
             const uniqueUsers = [];
             const map = new Map();
-            for (const item of users) {
+            for (const item of usersArray) {
                 if(!map.has(item.userId)){
                     map.set(item.userId, true);
                     uniqueUsers.push(item);
                 }
             }
             
-            uniqueUsers.sort((a,b) => b.score - a.score);
+            // 점수(Score) 기준 높은 순서대로 내림차순 정렬
+            uniqueUsers.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-            const tbody = document.getElementById('ranksTableBody');
-            tbody.innerHTML = "";
+            // HTML 테이블에 바인딩
             uniqueUsers.forEach((u, i) => {
-                const isMe = currentUser && u.userId === currentUser.userId ? "bg-blue-50" : "";
+                // 현재 로그인한 본인 계정인 경우 줄 배경을 파란색으로 강조
+                const isMe = currentUser && u.userId === currentUser.userId ? "bg-blue-50/80 font-bold" : "";
+                
+                // 순위에 따른 메달 마크 서식 추가 (1, 2, 3등 시각화)
+                let rankBadge = i + 1;
+                if (i === 0) rankBadge = `<span class="text-amber-500 text-lg">🥇</span>`;
+                else if (i === 1) rankBadge = `<span class="text-slate-400 text-lg">🥈</span>`;
+                else if (i === 2) rankBadge = `<span class="text-amber-700 text-lg">🥉</span>`;
+
                 tbody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-50 ${isMe}">
-                        <td class="p-4 text-center font-bold">${i+1}</td>
-                        <td class="p-4 font-mono">${u.userId}</td>
-                        <td class="p-4 font-bold text-slate-800">${u.name}</td>
-                        <td class="p-4 text-xs">${u.school} (${u.role})</td>
-                        <td class="p-4 text-center font-bold text-blue-600">${u.score || 0}</td>
+                    <tr class="hover:bg-slate-50 border-b border-slate-100 transition ${isMe}">
+                        <td class="p-4 text-center font-bold">${rankBadge}</td>
+                        <td class="p-4 font-mono text-slate-600">${u.userId}</td>
+                        <td class="p-4 text-slate-800">${u.name}</td>
+                        <td class="p-4 text-xs text-slate-500">${u.school} (${u.role})</td>
+                        <td class="p-4 text-center font-black text-blue-600 text-base">${u.score || 0} 점</td>
                     </tr>
                 `);
             });
