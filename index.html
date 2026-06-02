@@ -929,24 +929,49 @@ function promoteToAdmin() {
             });
         }
 
-        // Ranks API (구글 시트 실시간 연동 버전)
+       // Ranks API (오류 수정 및 주소 파라미터 안전화 버전)
         function loadRanks() {
             const tbody = document.getElementById('ranksTableBody');
             tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> 실시간 랭킹 정보를 불러오는 중입니다...</td></tr>`;
 
-            // 1. 구글 시트 연동 주소가 있을 때 (실시간 연동 모드)
             if (GOOGLE_SCRIPT_URL) {
-                fetch(`${GOOGLE_SCRIPT_URL}?action=getRanks`)
-                .then(res => res.json())
+                // [안전화 패치] URL 뒤의 불필요한 공백이나 해시 제거
+                let cleanUrl = GOOGLE_SCRIPT_URL.trim();
+                
+                // URL 객체를 생성하여 안전하게 파라미터를 결합합니다.
+                // 기존 주소에 ? 기호가 있든 없든 시스템이 알아서 안전하게 파라미터를 조립합니다.
+                let targetUrl;
+                try {
+                    targetUrl = new URL(cleanUrl);
+                    targetUrl.searchParams.set("action", "getRanks");
+                    // 브라우저 캐시 때문에 옛날 랭킹이 불려오는 현상을 방지하기 위한 타임스탬프 추가
+                    targetUrl.searchParams.set("_", new Date().getTime());
+                } catch(e) {
+                    // 구글 주소 형식이 완전하지 않은 기본 문자열일 경우 백업 조립
+                    const separator = cleanUrl.includes("?") ? "&" : "?";
+                    targetUrl = cleanUrl + separator + "action=getRanks&_=" + new Date().getTime();
+                }
+
+                fetch(targetUrl)
+                .then(res => {
+                    if (!res.ok) throw new Error("Network response was not ok");
+                    return res.json();
+                })
                 .then(data => {
+                    // 구글 스크립트 try-catch 문에서 서버 자체 에러 객체가 넘어왔을 경우 처리
+                    if (data && data.error) {
+                        console.error("구글 서버 내부 오류:", data.error);
+                        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">서버 오류: ${data.error}</td></tr>`;
+                        return;
+                    }
                     renderRanksTable(data);
                 })
                 .catch(err => {
-                    console.error("랭킹 로딩 실패:", err);
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">랭킹 데이터를 불러오는데 실패했습니다.</td></tr>`;
+                    console.error("랭킹 로딩 통신 실패:", err);
+                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">랭킹 데이터를 불러오는데 실패했습니다. (연동 주소를 확인하세요)</td></tr>`;
                 });
             } else {
-                // 2. 구글 시트 연동 주소가 없을 때 (기존 로컬 가상 모드 백업)
+                // 구글 시트 연동 주소가 없을 때 작동하는 백업 로컬 모드
                 let users = JSON.parse(localStorage.getItem('mock_users')) || [];
                 if(currentUser && !users.find(u => u.userId === currentUser.userId)) {
                     users.push(currentUser);
