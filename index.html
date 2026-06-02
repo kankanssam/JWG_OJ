@@ -955,7 +955,7 @@ function promoteToAdmin() {
             }
         }
 
-        // 랭킹 데이터를 정렬하고 화면 표에 그려주는 공통 함수
+        // 랭킹 데이터를 정렬하고 화면 표에 그려주는 공통 함수 (데이터 안정화 버전)
         function renderRanksTable(usersArray) {
             const tbody = document.getElementById('ranksTableBody');
             tbody.innerHTML = "";
@@ -965,23 +965,36 @@ function promoteToAdmin() {
                 return;
             }
 
-            // 고유 유저 필터링 (ID 중복 제거)
+            // 고유 유저 필터링 (ID 중복 제거 및 데이터 매핑 안전화)
             const uniqueUsers = [];
             const map = new Map();
+            
             for (const item of usersArray) {
-                if(!map.has(item.userId)){
-                    map.set(item.userId, true);
-                    uniqueUsers.push(item);
+                // [안전화 장치] API 변수명이 소문자(userid) 또는 카멜케이스(userId)인 경우 모두 대응
+                const uid = item.userId || item.userid || item.ID || "알수없음";
+                
+                if(!map.has(uid)){
+                    map.set(uid, true);
+                    
+                    // 각 변수가 undefined 일 때를 대비한 기본값(||) 보정 작업
+                    uniqueUsers.push({
+                        userId: uid,
+                        name: item.name || item.Name || "이름없음",
+                        role: item.role || item.Role || "학생",
+                        school: item.school || item.School || "정왕고등학교",
+                        // [NaN 방지] score 값을 강제로 Number형 숫자로 변환하고, 실패 시 0점으로 강제 세팅
+                        score: isNaN(Number(item.score)) ? 0 : Number(item.score)
+                    });
                 }
             }
             
             // 점수(Score) 기준 높은 순서대로 내림차순 정렬
-            uniqueUsers.sort((a, b) => (b.score || 0) - (a.score || 0));
+            uniqueUsers.sort((a, b) => b.score - a.score);
 
-            // HTML 테이블에 바인딩
+            // HTML 테이블에 실시간 바인딩
             uniqueUsers.forEach((u, i) => {
                 // 현재 로그인한 본인 계정인 경우 줄 배경을 파란색으로 강조
-                const isMe = currentUser && u.userId === currentUser.userId ? "bg-blue-50/80 font-bold" : "";
+                const isMe = currentUser && (u.userId === currentUser.userId || u.userId === currentUser.userid) ? "bg-blue-50/80 font-bold" : "";
                 
                 // 순위에 따른 메달 마크 서식 추가 (1, 2, 3등 시각화)
                 let rankBadge = i + 1;
@@ -993,9 +1006,9 @@ function promoteToAdmin() {
                     <tr class="hover:bg-slate-50 border-b border-slate-100 transition ${isMe}">
                         <td class="p-4 text-center font-bold">${rankBadge}</td>
                         <td class="p-4 font-mono text-slate-600">${u.userId}</td>
-                        <td class="p-4 text-slate-800">${u.name}</td>
+                        <td class="p-4 text-slate-800 font-semibold">${u.name}</td>
                         <td class="p-4 text-xs text-slate-500">${u.school} (${u.role})</td>
-                        <td class="p-4 text-center font-black text-blue-600 text-base">${u.score || 0} 점</td>
+                        <td class="p-4 text-center font-black text-blue-600 text-base">${u.score} 점</td>
                     </tr>
                 `);
             });
