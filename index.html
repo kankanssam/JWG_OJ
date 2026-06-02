@@ -930,48 +930,67 @@ function promoteToAdmin() {
         }
 
        // Ranks API (오류 수정 및 주소 파라미터 안전화 버전)
+        // Ranks API (할당량 초과 예외 처리 및 통신 안전화 융합 버전)
         function loadRanks() {
             const tbody = document.getElementById('ranksTableBody');
             tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-400"><i class="fa-solid fa-spinner fa-spin mr-2"></i> 실시간 랭킹 정보를 불러오는 중입니다...</td></tr>`;
 
             if (GOOGLE_SCRIPT_URL) {
-                // [안전화 패치] URL 뒤의 불필요한 공백이나 해시 제거
+                // 주소의 불필요한 공백 제거
                 let cleanUrl = GOOGLE_SCRIPT_URL.trim();
-                
-                // URL 객체를 생성하여 안전하게 파라미터를 결합합니다.
-                // 기존 주소에 ? 기호가 있든 없든 시스템이 알아서 안전하게 파라미터를 조립합니다.
                 let targetUrl;
+
                 try {
-                    targetUrl = new URL(cleanUrl);
-                    targetUrl.searchParams.set("action", "getRanks");
-                    // 브라우저 캐시 때문에 옛날 랭킹이 불려오는 현상을 방지하기 위한 타임스탬프 추가
-                    targetUrl.searchParams.set("_", new Date().getTime());
-                } catch(e) {
-                    // 구글 주소 형식이 완전하지 않은 기본 문자열일 경우 백업 조립
+                    // URL 주소 조립 안정화 (기존 주소 구조에 구애받지 않음)
+                    if (cleanUrl.startsWith("http")) {
+                        let urlObj = new URL(cleanUrl);
+                        urlObj.searchParams.set("action", "getRanks");
+                        urlObj.searchParams.set("cache_bust", new Date().getTime()); // 브라우저 가짜 캐싱 무력화
+                        targetUrl = urlObj.toString();
+                    } else {
+                        const separator = cleanUrl.includes("?") ? "&" : "?";
+                        targetUrl = cleanUrl + separator + "action=getRanks&cache_bust=" + new Date().getTime();
+                    }
+                } catch (e) {
                     const separator = cleanUrl.includes("?") ? "&" : "?";
-                    targetUrl = cleanUrl + separator + "action=getRanks&_=" + new Date().getTime();
+                    targetUrl = cleanUrl + separator + "action=getRanks&cache_bust=" + new Date().getTime();
                 }
 
-                fetch(targetUrl)
+                // 구글 서버 트래픽 혼잡에 대비한 타임아웃 제한장치 탑재 (기본 8초)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                fetch(targetUrl, { signal: controller.signal })
                 .then(res => {
-                    if (!res.ok) throw new Error("Network response was not ok");
+                    clearTimeout(timeoutId);
+                    if (!res.ok) throw new Error("구글 서버 응답 지연 (트래픽 할당량 초과 계열)");
                     return res.json();
                 })
                 .then(data => {
-                    // 구글 스크립트 try-catch 문에서 서버 자체 에러 객체가 넘어왔을 경우 처리
+                    // 구글 서버가 내뱉은 커스텀 예외 에러 캐치
                     if (data && data.error) {
-                        console.error("구글 서버 내부 오류:", data.error);
-                        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">서버 오류: ${data.error}</td></tr>`;
+                        console.error("서버 내부 제어 오류:", data.error);
+                        tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500"><i class="fa-solid fa-circle-exclamation mr-1"></i> 시트 연동 오류: ${data.error}</td></tr>`;
                         return;
                     }
                     renderRanksTable(data);
                 })
                 .catch(err => {
-                    console.error("랭킹 로딩 통신 실패:", err);
-                    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-red-500">랭킹 데이터를 불러오는데 실패했습니다. (연동 주소를 확인하세요)</td></tr>`;
+                    clearTimeout(timeoutId);
+                    console.error("랭킹 통신 장애 상세 로그:", err);
+                    
+                    // 구글 서버 차단/지연 시 학생들에게 불쾌한 에러 대신 부드러운 가이드라인 제공
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="p-8 text-center text-amber-600 bg-amber-50/50">
+                                <i class="fa-solid fa-triangle-exclamation text-lg mr-2"></i> 
+                                구글 서버의 순간적인 데이터 호출 제한을 초과했습니다.<br>
+                                <span class="text-xs text-slate-400 block mt-1">잠시 후 다시 [랭킹] 탭을 클릭하거나 새로고침(F5)을 해주세요.</span>
+                            </td>
+                        </tr>`;
                 });
             } else {
-                // 구글 시트 연동 주소가 없을 때 작동하는 백업 로컬 모드
+                // 구글 연동 주소가 기입되지 않았을 경우 작동하는 안전 로컬 모드
                 let users = JSON.parse(localStorage.getItem('mock_users')) || [];
                 if(currentUser && !users.find(u => u.userId === currentUser.userId)) {
                     users.push(currentUser);
