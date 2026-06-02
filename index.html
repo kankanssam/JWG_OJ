@@ -398,39 +398,7 @@ function doGet(e) {
       }
     }
     return ContentService.createTextOutput(JSON.stringify(list)).setMimeType(ContentService.MimeType.JSON);
-  }
-// ------------------ [신규 실시간 랭킹 조회 API] ------------------
-  if (action === "getRanks") {
-    var sheet = ss.getSheetByName("users");
-    if (!sheet) return createJsonOutput([]);
-
-    var data = sheet.getDataRange().getValues();
-    var usersList = [];
-
-    // 첫 번째 줄(헤더: ID, 이름 등)을 제외하고 회원 데이터 수집
-    for (var i = 1; i < data.length; i++) {
-      // 데이터 구조에 맞게 변수 매핑 (시트 열 순서에 따라 인덱스 확인 필요)
-      // 예: 0번열=ID, 1번열=비밀번호, 2번열=이름, 3번열=등급, 4번열=학교, 5번열=점수
-      var userId = data[i][0];
-      var name = data[i][2];
-      var role = data[i][3];
-      var school = data[i][4] || "정왕고등학교";
-      var score = Number(data[i][5]) || 0; // 6번째 열(F열)이 점수일 때
-
-      usersList.push({
-        userId: userId,
-        name: name,
-        role: role,
-        school: school,
-        score: score
-      });
-    }
-
-    // 웹으로 정렬된 데이터를 JSON 형태로 반환
-    return ContentService.createTextOutput(JSON.stringify(usersList))
-                         .setMimeType(ContentService.MimeType.JSON);
-  }
-  // -----------------------------------------------------------------						
+  }				
 }
 
 function doPost(e) {
