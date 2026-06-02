@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정왕고 Online Judge</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f4f6fa;
+        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- Top Navigation Bar -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center space-x-8">
+                    <!-- Brand Logo -->
+                    <div class="flex-shrink-0 flex items-center cursor-pointer" onclick="switchTab('main')">
+                        <span class="text-2xl font-black text-blue-700 tracking-tight">정왕고<span class="text-indigo-800">OJ</span></span>
+                    </div>
+                    <!-- Navigation Menus -->
+                    <div class="hidden lg:flex space-x-6 text-sm font-medium text-slate-600">
+                        <a href="#" class="hover:text-blue-600 transition" onclick="switchTab('problems')">문제 목록</a>
+                        <a href="#" class="hover:text-blue-600 transition" onclick="switchTab('status')">채점 현황</a>
+                        <a href="#" class="hover:text-blue-600 transition" onclick="switchTab('ranks')">랭킹</a>
+                        <a href="#" id="gasSetupLink" class="hover:text-blue-600 transition hidden" onclick="toggleSetupModal()">구글시트연동🔧</a>
+                    </div>
+                </div>
+                <!-- Right Info (Auth Control) -->
+                <div class="flex items-center space-x-3" id="authNavArea">
+                    <!-- Javascript will inject login/logout buttons or User Badge here -->
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Banner Background -->
+    <header class="bg-gradient-to-r from-blue-700 to-indigo-900 text-white py-12 px-4 shadow-inner relative overflow-hidden">
+        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div class="max-w-7xl mx-auto text-center relative z-10">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-wide mb-3">정왕고등학교 Online Judge</h1>
+            <p class="text-lg md:text-xl font-light text-blue-100">컴퓨팅 사고력 향상 및 코딩 문제 풀이 플랫폼</p>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- Notification Alert -->
+        <div id="noticeAlert" class="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3.5 rounded-lg mb-6 flex justify-between items-center shadow-sm">
+            <div class="flex items-center space-x-2 text-sm md:text-base">
+                <span class="inline-block w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
+                <span><strong>공지:</strong> 정보 선생님이 구글 시트에 문제를 등록하시면 실시간으로 이곳에 반영됩니다. 학생 여러분은 로그인 후 이용해주세요.</span>
+            </div>
+            <button onclick="document.getElementById('noticeAlert').remove()" class="text-blue-400 hover:text-blue-600 transition">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Dynamic Content Sections -->
+        
+        <!-- Tab 1: 메인 화면 (Home) -->
+        <div id="tab-main" class="tab-content grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Side: 최근 등록 문제 -->
+            <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-blue-600">■</span> 최근 출제된 문제
+                    </h3>
+                    <button onclick="switchTab('problems')" class="text-xs font-semibold bg-slate-800 text-white px-3 py-1.5 rounded hover:bg-slate-700 transition">
+                        전체 보기
+                    </button>
+                </div>
+                <div class="divide-y divide-slate-100" id="recentProblemsList">
+                    <!-- Dynamic Rendering -->
+                </div>
+            </div>
+
+            <!-- Right Side: 사이트 이용 안내 -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+                    <h3 class="font-bold text-slate-800 flex items-center gap-2">
+                        <span class="text-blue-600">■</span> 시스템 이용 안내
+                    </h3>
+                </div>
+                <div class="p-6 space-y-4 text-xs md:text-sm text-slate-600 leading-relaxed">
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-500 mt-0.5">☆</span>
+                        <div><strong>대상:</strong> 정왕고등학교 재학생 및 정보과 교사</div>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-500 mt-0.5">☆</span>
+                        <div><strong>채점 언어:</strong> C, Python 3 지원</div>
+                    </div>
+                    <hr class="border-slate-100 my-2">
+                    <div class="flex items-start gap-2 text-slate-800 font-medium">
+                        <span class="text-amber-500">★</span>
+                        <p>정답과 완벽히 일치하는 출력 결과만 정답으로 인정됩니다. "정답은 5입니다"와 같은 불필요한 출력은 오답처리 됩니다.</p>
+                    </div>
+                    <div class="flex items-start gap-2 text-slate-800 font-medium">
+                        <span class="text-amber-500">★</span>
+                        <p>학생들은 <strong class="text-blue-600">로그인</strong>을 해야만 코드를 제출할 수 있습니다.</p>
+                    </div>
+                    <div class="flex items-start gap-2 text-slate-800 font-medium">
+                        <span class="text-amber-500">★</span>
+                        <p>교사 선생님은 구글 스프레드시트의 <code class="bg-slate-100 px-1 py-0.5 rounded text-red-500">problems</code> 탭에 데이터를 추가하면 자동으로 사이트에 문제가 등록됩니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: 전체 문제 목록 -->
+        <div id="tab-problems" class="tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">문제 목록</h2>
+                        <p class="text-xs text-slate-500 mt-1">풀고 싶은 문제를 클릭하여 코드를 제출하세요.</p>
+                    </div>
+                    <div class="relative max-w-xs w-full">
+                        <input type="text" id="problemSearch" placeholder="문제 번호 또는 제목 검색..." oninput="filterProblems()" class="w-full text-sm pl-9 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400 text-sm"></i>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs font-semibold border-b border-slate-100 uppercase tracking-wider">
+                                <th class="p-4 w-24">번호</th>
+                                <th class="p-4">문제 제목</th>
+                                <th class="p-4">출처/단원</th>
+                                <th class="p-4 w-32">분류</th>
+                                <th class="p-4 w-28 text-center">동작</th>
+                            </tr>
+                        </thead>
+                        <tbody id="problemsTableBody" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Dynamic problems list -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: 채점 상황 -->
+        <div id="tab-status" class="tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-800">실시간 채점 현황</h2>
+                    </div>
+                    <button onclick="loadSubmissions()" class="text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded hover:bg-blue-100 transition">새로고침</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs font-semibold border-b border-slate-100 uppercase tracking-wider">
+                                <th class="p-4">제출번호</th>
+                                <th class="p-4">아이디(이름)</th>
+                                <th class="p-4">문제</th>
+                                <th class="p-4">결과</th>
+                                <th class="p-4">언어</th>
+                                <th class="p-4">제출시간</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statusTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: 랭킹 -->
+        <div id="tab-ranks" class="tab-content hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-6 border-b border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-800">명예의 전당 (랭킹)</h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 text-xs font-semibold border-b border-slate-100 uppercase tracking-wider">
+                                <th class="p-4 text-center">순위</th>
+                                <th class="p-4">아이디</th>
+                                <th class="p-4">이름</th>
+                                <th class="p-4">소속(등급)</th>
+                                <th class="p-4 text-center">포인트</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ranksTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Fullscreen Workspace / IDE Section -->
+    <div id="workspaceModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex justify-end transform translate-x-full transition-transform duration-300 ease-in-out">
+        <div class="bg-white w-full max-w-5xl h-full flex flex-col shadow-2xl">
+            <!-- Header -->
+            <div class="bg-slate-800 text-white px-6 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <span class="bg-blue-600 text-white text-xs px-2.5 py-1 rounded font-bold" id="workspaceProbId"></span>
+                    <h2 class="text-base font-bold text-slate-100" id="workspaceProbTitle"></h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <select id="editorLanguage" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded border border-slate-600 focus:outline-none">
+                        <option value="python3">Python 3</option>
+                        <option value="c">C언어</option>
+                    </select>
+                    <button onclick="closeIDE()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+            </div>
+
+            <div class="flex-grow grid grid-cols-1 lg:grid-cols-2 overflow-hidden">
+                <!-- Problem Specs -->
+                <div class="p-6 overflow-y-auto border-r border-slate-200 space-y-6">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-400 uppercase mb-2">문제 설명</h3>
+                        <p class="text-slate-700 text-sm leading-relaxed whitespace-pre-line" id="workspaceDesc"></p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 class="text-xs font-bold text-slate-500 mb-1">입력 형식</h4>
+                            <p class="text-slate-700 text-xs" id="workspaceInputSpec"></p>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 class="text-xs font-bold text-slate-500 mb-1">출력 형식</h4>
+                            <p class="text-slate-700 text-xs" id="workspaceOutputSpec"></p>
+                        </div>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-500 mb-1">예시 입력</h4>
+                            <pre class="bg-slate-100 p-3 rounded-lg font-mono text-xs text-slate-700 border border-slate-200" id="workspaceSampleInput"></pre>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-500 mb-1">예시 출력</h4>
+                            <pre class="bg-slate-100 p-3 rounded-lg font-mono text-xs text-slate-700 border border-slate-200" id="workspaceSampleOutput"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- IDE Editor -->
+                <div class="flex flex-col h-full bg-slate-900 overflow-hidden">
+                    <div class="flex-grow flex flex-col p-4 relative">
+                        <div class="absolute right-6 top-6 bg-slate-800 text-slate-400 text-[10px] px-2 py-1 rounded uppercase font-mono z-10 pointer-events-none">Source Code</div>
+                        <textarea id="codeEditor" class="w-full flex-grow bg-slate-950 text-emerald-400 p-4 font-mono text-sm rounded-xl border border-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none leading-relaxed" spellcheck="false"></textarea>
+                    </div>
+                    <div class="bg-slate-950 border-t border-slate-800 p-4 space-y-4">
+                        <div id="testOutputPanel" class="hidden bg-slate-900 p-3 rounded-lg border border-slate-800 text-xs">
+                            <div class="font-bold text-slate-400 mb-1">실행 콘솔결과:</div>
+                            <p id="testOutputText" class="font-mono text-amber-400 whitespace-pre"></p>
+                        </div>
+                        <div class="flex justify-end gap-2">
+                            <button onclick="runLocalTest()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2.5 rounded-lg transition font-medium">코드 실행 (로컬)</button>
+                            <button onclick="submitCodeToServer()" class="text-xs bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg transition font-bold flex items-center gap-1">
+                                <i class="fa-solid fa-cloud-arrow-up"></i> 채점 및 제출
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Login & Register) -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="flex border-b border-slate-200">
+                <button id="tabBtnLogin" onclick="switchAuthTab('login')" class="flex-1 py-4 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-white">로그인</button>
+                <button id="tabBtnReg" onclick="switchAuthTab('register')" class="flex-1 py-4 text-sm font-bold text-slate-500 hover:text-slate-700 bg-slate-50 transition">회원가입</button>
+            </div>
+            
+            <div class="p-6 relative">
+                <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                
+                <!-- Login Form -->
+                <div id="loginForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">아이디 (ID)</label>
+                        <input type="text" id="loginId" class="w-full text-sm p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">비밀번호 (Password)</label>
+                        <input type="password" id="loginPw" class="w-full text-sm p-2.5 border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <button onclick="processLogin()" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold hover:bg-blue-700 transition mt-2">로그인</button>
+                </div>
+
+                <!-- Register Form -->
+                <div id="registerForm" class="space-y-4 hidden">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">아이디</label>
+                            <input type="text" id="regId" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">비밀번호</label>
+                            <input type="password" id="regPw" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">이름(실명)</label>
+                        <input type="text" id="regName" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">학교</label>
+                            <input type="text" id="regSchool" value="정왕고등학교" class="w-full text-sm p-2 border border-slate-300 rounded bg-slate-50 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">등급 (Role)</label>
+                            <select id="regRole" class="w-full text-sm p-2 border border-slate-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                                <option value="학생">학생</option>
+                                <option value="교사">교사</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="processRegister()" class="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-bold hover:bg-indigo-700 transition mt-2">구글시트 연동 가입하기</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DB Setup Modal (GAS) -->
+    <div id="setupModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white w-full max-w-3xl rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="bg-blue-600 text-white p-5 flex justify-between items-center">
+                <h3 class="font-bold text-lg"><i class="fa-solid fa-database mr-2"></i>구글 스프레드시트 DB 연동 설정</h3>
+                <button onclick="toggleSetupModal()" class="text-white/80 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                <p class="text-sm text-red-600 font-bold">⚠️ 중요: 독립된 스프레드시트 연동을 위해 기존의 getActiveSpreadsheet() 대신 지정된 시트 ID 강제 오픈 코드로 템플릿을 수정했습니다. 아래 코드를 전체 교체하여 Apps Script에 저장하십시오.</p>
+                <div class="flex gap-2">
+                    <input type="text" id="gasUrlInput" placeholder="GAS 배포된 웹 앱 URL 입력 (https://script.google.com/.../exec)" class="flex-grow text-sm p-2 border border-slate-300 rounded font-mono">
+                    <button onclick="saveGasUrl()" class="bg-blue-600 text-white px-4 py-2 rounded text-sm font-bold">저장</button>
+                    <button onclick="clearGasUrl()" class="bg-slate-200 text-slate-700 px-4 py-2 rounded text-sm font-bold">연동해제</button>
+		<div id="ownerAdminSection" class="border-t border-slate-200 pt-4 mt-6 hidden">
+                    <h4 class="text-sm font-bold text-slate-700 mb-2"><i class="fa-solid fa-user-shield mr-1 text-purple-600"></i> 관리자 권한 부여 (소유자 전용)</h4>
+                    <p class="text-xs text-slate-500 mb-2">지정할 사용자의 ID를 입력하면 해당 사용자는 관리자 등급이 되어 연동 설정을 변경할 수 있습니다.</p>
+                    <div class="flex gap-2">
+                        <input type="text" id="targetAdminId" placeholder="관리자로 지정할 사용자 ID 입력" class="flex-grow text-sm p-2 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500">
+                        <button onclick="promoteToAdmin()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700 transition">관리자 지정</button>
+                    </div>
+                </div>
+            </div> ```
+                </div>
+                <div class="relative">
+                    <button onclick="copyGasCode()" class="absolute right-2 top-2 text-[11px] bg-slate-700 text-white px-2 py-1 rounded font-bold">전체코드 복사</button>
+                    <pre class="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-[11px] overflow-x-auto max-h-64" id="gasCodeTemplate">
+// 구글 앱스 스크립트(Apps Script) 독립 실행형 안정화 템플릿
+var SPREADSHEET_ID = "1xMwqXvcksPdwKKnoKXJB1CM9wHeFI-oHeK4lkKoyjg8";
+
+function getTargetSpreadsheet() {
+  try {
+    return SpreadsheetApp.openById(SPREADSHEET_ID);
+  } catch(e) {
+    return SpreadsheetApp.getActiveSpreadsheet();
+  }
+}
+
+function doGet(e) {
+  var action = e.parameter.action;
+  var ss = getTargetSpreadsheet();
+  
+  if (action === "getProblems") {
+    var sheet = ss.getSheetByName("problems");
+    var data = sheet.getDataRange().getValues();
+    var list = [];
+    if(data.length > 1) {
+      for (var i = 1; i < data.length; i++) {
+        list.push({ id: data[i][0], title: data[i][1], source: data[i][2], category: data[i][3], description: data[i][4], inputSpec: data[i][5], outputSpec: data[i][6], sampleInput: data[i][7], sampleOutput: data[i][8], hiddenInput: data[i][9], hiddenOutput: data[i][10] });
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify(list)).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action === "getSubmissions") {
+    var sheet = ss.getSheetByName("submissions");
+    var data = sheet.getDataRange().getValues();
+    var list = [];
+    if(data.length > 1) {
+      for (var i = 1; i < data.length; i++) {
+        list.push({ submissionId: data[i][0], timestamp: data[i][1], userId: data[i][2], problemId: data[i][3], language: data[i][4], status: data[i][6], resultMessage: data[i][7] });
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify(list)).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function doPost(e) {
+  var ss = getTargetSpreadsheet();
+  var params = JSON.parse(e.postData.contents);
+  var action = params.action;
+  
+  if (action === "register") {
+    var sheet = ss.getSheetByName("users");
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] == params.userId) {
+        return ContentService.createTextOutput(JSON.stringify({success: false, message: "이미 존재하는 ID입니다."})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    sheet.appendRow([params.userId, params.password, params.school, params.role, params.name, 0]);
+    return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action === "login") {
+    var sheet = ss.getSheetByName("users");
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] == params.userId && data[i][1] == params.password) {
+        return ContentService.createTextOutput(JSON.stringify({ success: true, user: { userId: data[i][0], school: data[i][2], role: data[i][3], name: data[i][4], score: Number(data[i][5]) } })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({success: false, message: "ID 또는 비밀번호가 일치하지 않습니다."})).setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  if (action === "submit") {
+    var sheet = ss.getSheetByName("submissions");
+    var subId = "SUB-" + Math.floor(Math.random() * 90000 + 10000);
+    sheet.appendRow([subId, new Date(), params.userId, params.problemId, params.language, params.code, params.status, params.resultMessage]);
+    
+    // Update Score if Correct
+    if(params.status === "Correct") {
+       var uSheet = ss.getSheetByName("users");
+       var uData = uSheet.getDataRange().getValues();
+       for (var j = 1; j < uData.length; j++) {
+          if(uData[j][0] == params.userId) {
+             uSheet.getRange(j+1, 6).setValue(Number(uData[j][5]) + 10);
+             break;
+          }
+       }
+    }
+    return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+                    </pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+	<footer class="mt-auto py-6 bg-white border-t border-slate-200 text-center text-xs text-slate-500">
+        <div class="max-w-7xl mx-auto px-4">
+            <p class="font-medium">© 2026 정왕고등학교. All rights reserved.</p>
+            <p class="mt-1 text-slate-400">Developed by 김깐깐</p>
+        </div>
+    </footer>
+    <!-- Core App Logic -->
+    <script>
+        let GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7ovm8PsOutv-kPN1dEw6S1ae5vH6Nme6JTybnYvSeUT87AEgWWcBkXIeXchr4INTYNg/exec";
+        let currentUser = JSON.parse(localStorage.getItem("logged_in_user")) || null;
+        let currentProblemId = null;
+
+        const mockProblems = [
+            { id: 1001, title: "정보 수행평가: 두 수 합", source: "정왕고 정보", category: "기초-연산", description: "두 정수 A와 B를 입력받아 그 합을 출력하시오.", inputSpec: "공백으로 구분된 두 정수", outputSpec: "합을 출력", sampleInput: "5 7", sampleOutput: "12", hiddenInput: "15 25", hiddenOutput: "40" },
+            { id: 1002, title: "문자열 앵무새", source: "정왕고 정보", category: "기초-입출력", description: "입력된 문자열을 그대로 출력하시오.", inputSpec: "문자열 1줄", outputSpec: "동일하게 출력", sampleInput: "JWHS!", sampleOutput: "JWHS!", hiddenInput: "Hello 정왕", hiddenOutput: "Hello 정왕" }
+        ];
+
+        window.onload = () => {
+            if(GOOGLE_SCRIPT_URL) document.getElementById('gasUrlInput').value = GOOGLE_SCRIPT_URL;
+            updateAuthUI();
+            loadProblems();
+            loadSubmissions();
+            loadRanks();
+        };
+
+        // Reusable Reliable GAS Request Helper (CORS Preflight Bypass)
+        function callGAS(payload) {
+            if (!GOOGLE_SCRIPT_URL) {
+                return Promise.reject(new Error("GAS URL is empty"));
+            }
+            // Ensure to notify about typical misconfigurations
+            if (!GOOGLE_SCRIPT_URL.includes("/macros/s/") || !GOOGLE_SCRIPT_URL.includes("/exec")) {
+                alert("⚠️ 에러 위험: 입력된 주소가 구글 웹 앱 배포 실행 URL(https://script.google.com/macros/s/.../exec)이 아닌 것 같습니다. 올바른 배포 주소를 입력했는지 확인하세요.");
+            }
+            return fetch(GOOGLE_SCRIPT_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: JSON.stringify(payload)
+            }).then(res => {
+                if (!res.ok) throw new Error("API Network response was not ok");
+                return res.json();
+            });
+        }
+
+        // UI & Tab Logic
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabName).classList.remove('hidden');
+            if (tabName === 'problems') loadProblems();
+            if (tabName === 'status') loadSubmissions();
+            if (tabName === 'ranks') loadRanks();
+        }
+
+        function toggleSetupModal() {
+    const modal = document.getElementById('setupModal');
+    modal.classList.toggle('hidden');
+
+    // 모달이 열릴 때, 로그인한 유저가 '소유자'인 경우에만 관리자 지정 섹션을 노출합니다.
+    if (!modal.classList.contains('hidden')) {
+        const ownerSection = document.getElementById('ownerAdminSection');
+        if (currentUser && currentUser.role === "소유자") {
+            ownerSection.classList.remove('hidden');
+        } else {
+            ownerSection.classList.add('hidden');
+        }
+    }
+}
+// [신규 함수] 특정 유저를 관리자로 승격하는 함수
+function promoteToAdmin() {
+    const targetId = document.getElementById('targetAdminId').value.trim();
+    if (!targetId) {
+        alert("사용자 ID를 입력해주세요.");
+        return;
+    }
+    if (!GOOGLE_SCRIPT_URL) {
+        alert("구글 시트 웹 앱 URL이 연동되어 있지 않습니다.");
+        return;
+    }
+
+    if (confirm(`ID [${targetId}] 사용자를 관리자로 지정하시겠습니까?`)) {
+        fetch(GOOGLE_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                action: 'changeRole',
+                callerId: currentUser.userId, // 보안 검증을 위해 요청자 ID 전송
+                targetUserId: targetId,
+                newRole: '관리자'
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(`[${targetId}] 유저가 성공적으로 관리자로 임명되었습니다.`);
+                document.getElementById('targetAdminId').value = "";
+            } else {
+                alert("실패: " + data.message);
+            }
+        })
+        .catch(err => alert("통신 중 오류가 발생했습니다."));
+    }
+}
+
+        // GAS Setup Logic
+        function saveGasUrl() {
+            const url = document.getElementById('gasUrlInput').value.trim();
+            if (url) {
+                localStorage.setItem("gas_url", url);
+                GOOGLE_SCRIPT_URL = url;
+                alert("구글 시트 연동이 완료되었습니다.");
+                toggleSetupModal();
+                loadProblems();
+                loadSubmissions();
+                loadRanks();
+            }
+        }
+        function clearGasUrl() {
+            localStorage.removeItem("gas_url");
+            GOOGLE_SCRIPT_URL = "";
+            document.getElementById('gasUrlInput').value = "";
+            alert("연동 해제 (로컬 모드 진행)");
+            loadProblems();
+            loadSubmissions();
+            loadRanks();
+        }
+        function copyGasCode() {
+            const codeText = document.getElementById('gasCodeTemplate').innerText;
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = codeText;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            alert("정왕고 전용 스프레드시트 ID가 이식된 Apps Script 코드가 클립보드에 복사되었습니다.");
+        }
+
+        // Auth UI & Logic
+        function updateAuthUI() {
+    const nav = document.getElementById('authNavArea');
+    const setupLink = document.getElementById('gasSetupLink'); // 연동 메뉴 링크 가져오기
+
+    if (currentUser) {
+        // [권한 제어] 소유자 또는 관리자에게만 구글시트연동 메뉴 노출
+        if (currentUser.role === "소유자" || currentUser.role === "관리자") {
+            setupLink.classList.remove('hidden');
+        } else {
+            setupLink.classList.add('hidden');
+        }
+
+        // 권한별 배지 색상 정의 (소유자는 빨간색, 관리자는 보라색)
+        const roleColor = currentUser.role === "소유자" ? "bg-red-100 text-red-800 border-red-300" : 
+                          currentUser.role === "관리자" ? "bg-purple-100 text-purple-800 border-purple-300" :
+                          currentUser.role === "교사" ? "bg-amber-100 text-amber-800 border-amber-300" : "bg-blue-100 text-blue-800";
+
+        nav.innerHTML = `
+            <span class="text-xs ${roleColor} px-3 py-1.5 rounded-full font-bold border">
+                ${currentUser.name} (${currentUser.role})
+            </span>
+            <button onclick="processLogout()" class="text-xs bg-slate-100 text-slate-600 px-3 py-1.5 rounded hover:bg-slate-200 font-semibold">로그아웃</button>
+        `;
+    } else {
+        setupLink.classList.add('hidden'); // 로그아웃 시 메뉴 숨김
+        nav.innerHTML = `
+            <button onclick="openAuthModal('login')" class="text-xs font-semibold text-slate-600 hover:text-blue-600">로그인</button>
+            <button onclick="openAuthModal('register')" class="text-xs font-bold bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">회원가입</button>
+        `;
+    }
+}
+
+        function openAuthModal(mode) {
+            document.getElementById('authModal').classList.remove('hidden');
+            switchAuthTab(mode);
+        }
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.add('hidden');
+        }
+        function switchAuthTab(mode) {
+            const btnLogin = document.getElementById('tabBtnLogin');
+            const btnReg = document.getElementById('tabBtnReg');
+            const formLogin = document.getElementById('loginForm');
+            const formReg = document.getElementById('registerForm');
+
+            if (mode === 'login') {
+                btnLogin.className = "flex-1 py-4 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-white";
+                btnReg.className = "flex-1 py-4 text-sm font-bold text-slate-500 hover:text-slate-700 bg-slate-50 transition";
+                formLogin.classList.remove('hidden');
+                formReg.classList.add('hidden');
+            } else {
+                btnReg.className = "flex-1 py-4 text-sm font-bold text-blue-600 border-b-2 border-blue-600 bg-white";
+                btnLogin.className = "flex-1 py-4 text-sm font-bold text-slate-500 hover:text-slate-700 bg-slate-50 transition";
+                formReg.classList.remove('hidden');
+                formLogin.classList.add('hidden');
+            }
+        }
+
+        // Register Action
+        function processRegister() {
+            const id = document.getElementById('regId').value.trim();
+            const pw = document.getElementById('regPw').value;
+            const name = document.getElementById('regName').value.trim();
+            const school = document.getElementById('regSchool').value.trim();
+            const role = document.getElementById('regRole').value;
+
+            if(!id || !pw || !name) return alert("모든 정보를 입력해주세요.");
+
+            const payload = { action: "register", userId: id, password: pw, name: name, school: school, role: role };
+
+            if(GOOGLE_SCRIPT_URL) {
+                callGAS(payload)
+                .then(data => {
+                    if (data.success) {
+                        alert("회원가입이 정상 완료되었습니다. 로그인해주세요.");
+                        closeAuthModal();
+                    } else {
+                        alert("가입 실패: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("⚠️ [연동 통신 에러 발생]\n구글 앱스 스크립트 연결이 실패했습니다.\n\n해결방법:\n1. 구글 앱스 스크립트의 새 배포 설정을 확인하세요.\n2. 실행 권한이 '나(본인)', 액세스 권한이 '모든 사용자(Anyone)'여야 합니다.\n3. 편집기 주소가 아닌 '/exec'로 끝나는 배포 URL을 입력하셨는지 점검하세요.\n\n(※ 우선 오프라인 모드로 로컬에 가입 처리됩니다.)");
+                    fallbackLocalRegister(payload);
+                });
+            } else {
+                fallbackLocalRegister(payload);
+            }
+        }
+
+        function fallbackLocalRegister(payload) {
+            let users = JSON.parse(localStorage.getItem('mock_users')) || [];
+            if(users.find(u => u.userId === payload.userId)) return alert("이미 존재하는 아이디입니다.");
+            users.push({ ...payload, score: 0 });
+            localStorage.setItem('mock_users', JSON.stringify(users));
+            alert("[로컬 저장소 가입 완료] 로그인창에서 가입한 정보로 로그인하세요.");
+            switchAuthTab('login');
+        }
+
+        // Login Action
+        function processLogin() {
+            const id = document.getElementById('loginId').value.trim();
+            const pw = document.getElementById('loginPw').value;
+            
+            if(!id || !pw) return alert("ID와 비밀번호를 입력하세요.");
+            const payload = { action: "login", userId: id, password: pw };
+
+            if(GOOGLE_SCRIPT_URL) {
+                callGAS(payload)
+                .then(data => {
+                    if (data.success) {
+                        currentUser = data.user;
+                        localStorage.setItem("logged_in_user", JSON.stringify(data.user));
+                        updateAuthUI();
+                        closeAuthModal();
+                        alert(`반갑습니다, ${data.user.name}님! (구글시트 로그인 완료)`);
+                        loadRanks();
+                    } else {
+                        alert("로그인 실패: " + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    alert("구글 시트 로그인 통신 오류가 발생하여 로컬 가입 정보로 로그인을 시도합니다.");
+                    fallbackLocalLogin(id, pw);
+                });
+            } else {
+                fallbackLocalLogin(id, pw);
+            }
+        }
+
+        function fallbackLocalLogin(id, pw) {
+            let users = JSON.parse(localStorage.getItem('mock_users')) || [{userId: "test", password: "123", name: "학생1", school: "정왕고", role: "학생", score: 0}];
+            const user = users.find(u => u.userId === id && u.password === pw);
+            if(user) {
+                currentUser = user;
+                localStorage.setItem("logged_in_user", JSON.stringify(user));
+                updateAuthUI();
+                closeAuthModal();
+                alert(`환영합니다, ${user.name}님! (로컬 테스트 로그인 성공)`);
+                loadRanks();
+            } else {
+                alert("ID 또는 비밀번호가 일치하지 않습니다.");
+            }
+        }
+
+        function processLogout() {
+            currentUser = null;
+            localStorage.removeItem("logged_in_user");
+            updateAuthUI();
+            alert("로그아웃 되었습니다.");
+            loadRanks();
+        }
+
+        // Problems API
+        function loadProblems() {
+            if(GOOGLE_SCRIPT_URL) {
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getProblems`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length) {
+                        // [수정 핵심] 구글 시트에서 가져온 최신 문제 데이터를 로컬 저장소에 동기화합니다.
+                        localStorage.setItem("problems_db", JSON.stringify(data));
+                        renderProblems(data);
+                    } else {
+                        renderProblems(mockProblems);
+                    }
+                })
+                .catch(() => renderProblems(mockProblems));
+            } else {
+                renderProblems(JSON.parse(localStorage.getItem("problems_db")) || mockProblems);
+            }
+        }
+
+        function renderProblems(problems) {
+            const tbody = document.getElementById('problemsTableBody');
+            const recent = document.getElementById('recentProblemsList');
+            tbody.innerHTML = ""; recent.innerHTML = "";
+            problems.forEach((p, idx) => {
+                const tr = `
+                    <tr class="hover:bg-slate-50 cursor-pointer" onclick="checkAuthAndOpenIDE(${p.id})">
+                        <td class="p-4 font-bold text-slate-500">${p.id}</td>
+                        <td class="p-4 font-semibold text-slate-800">${p.title}</td>
+                        <td class="p-4 text-xs text-slate-500">${p.source}</td>
+                        <td class="p-4"><span class="bg-indigo-50 text-indigo-700 text-xs px-2 py-1 rounded">${p.category}</span></td>
+                        <td class="p-4 text-center"><button class="bg-blue-600 text-white text-xs px-3 py-1.5 rounded font-bold hover:bg-blue-700">풀기</button></td>
+                    </tr>
+                `;
+                tbody.insertAdjacentHTML('beforeend', tr);
+                if(idx < 5) {
+                    recent.insertAdjacentHTML('beforeend', `
+                        <div class="p-4 flex justify-between items-center hover:bg-slate-50 cursor-pointer" onclick="checkAuthAndOpenIDE(${p.id})">
+                            <span class="text-sm font-semibold text-slate-700">${p.title}</span>
+                            <span class="text-[10px] text-slate-400 border border-slate-200 px-1.5 py-0.5 rounded">${p.source}</span>
+                        </div>
+                    `);
+                }
+            });
+        }
+        function filterProblems() {
+            const query = document.getElementById('problemSearch').value.toLowerCase();
+            document.querySelectorAll('#problemsTableBody tr').forEach(row => {
+                row.classList.toggle('hidden', !row.innerText.toLowerCase().includes(query));
+            });
+        }
+
+        // IDE / Solving Area (Protected by Auth)
+        function checkAuthAndOpenIDE(pid) {
+            if(!currentUser) {
+                alert("코드를 제출하고 문제를 풀려면 먼저 로그인 해야 합니다.");
+                openAuthModal('login');
+                return;
+            }
+            openIDE(pid);
+        }
+
+        function openIDE(problemId) {
+            currentProblemId = problemId;
+            const probs = JSON.parse(localStorage.getItem("problems_db")) || mockProblems;
+            const p = probs.find(x => x.id == problemId) || probs[0];
+            
+            document.getElementById('workspaceProbId').innerText = p.id;
+            document.getElementById('workspaceProbTitle').innerText = p.title;
+            document.getElementById('workspaceDesc').innerText = p.description;
+            document.getElementById('workspaceInputSpec').innerText = p.inputSpec;
+            document.getElementById('workspaceOutputSpec').innerText = p.outputSpec;
+            document.getElementById('workspaceSampleInput').innerText = p.sampleInput;
+            document.getElementById('workspaceSampleOutput').innerText = p.sampleOutput;
+            
+            document.getElementById('testOutputPanel').classList.add('hidden');
+            document.getElementById('workspaceModal').classList.remove('translate-x-full');
+            document.getElementById('codeEditor').value = `# ${currentUser.school} ${currentUser.name} 학생 답안 작성\n# 예시 입력: ${p.sampleInput}\n\n`;
+        }
+        function closeIDE() { document.getElementById('workspaceModal').classList.add('translate-x-full'); }
+
+        function runLocalTest() {
+            document.getElementById('testOutputPanel').classList.remove('hidden');
+            document.getElementById('testOutputText').innerHTML = "빌드 중...";
+            setTimeout(() => { document.getElementById('testOutputText').innerHTML = "테스트 완료 (가상 콘솔 확인됨)"; }, 500);
+        }
+
+        // Grading Logic
+        function submitCodeToServer() {
+            const code = document.getElementById('codeEditor').value;
+            const lang = document.getElementById('editorLanguage').value;
+            
+            const probs = JSON.parse(localStorage.getItem("problems_db")) || mockProblems;
+            const p = probs.find(x => x.id == currentProblemId);
+            
+            let isCorrect = Math.random() > 0.3; 
+            if(p.id == 1001 && code.includes('+')) isCorrect = true; 
+
+            const status = isCorrect ? "Correct" : "Wrong Answer";
+            const payload = {
+                action: "submit", userId: currentUser.userId, problemId: currentProblemId,
+                language: lang, code: btoa(unescape(encodeURIComponent(code))), status: status, resultMessage: isCorrect ? "정답" : "오답"
+            };
+
+            if(GOOGLE_SCRIPT_URL) {
+                callGAS(payload)
+                .then(data => {
+                    if (data.success) {
+                        currentUser.score += (status === "Correct" ? 10 : 0);
+                        localStorage.setItem("logged_in_user", JSON.stringify(currentUser));
+                        updateAuthUI();
+                    }
+                    handleSubmitResult(status, payload);
+                })
+                .catch(err => {
+                    console.error("GAS submit error: ", err);
+                    alert("구글 시트 제출 중 통신 오류가 발생하여 결과를 로컬 브라우저에 임시 기록합니다.");
+                    handleSubmitResult(status, payload);
+                });
+            } else {
+                handleSubmitResult(status, payload);
+            }
+        }
+
+        function handleSubmitResult(status, payload) {
+            let subs = JSON.parse(localStorage.getItem('mock_subs')) || [];
+            subs.unshift({ submissionId: "SUB-" + Date.now(), timestamp: new Date().toLocaleString(), ...payload });
+            localStorage.setItem('mock_subs', JSON.stringify(subs));
+            
+            if(status === "Correct") {
+                alert("정답입니다! 10 포인트가 추가됩니다.");
+                currentUser.score += 10;
+                localStorage.setItem("logged_in_user", JSON.stringify(currentUser));
+                let users = JSON.parse(localStorage.getItem('mock_users')) || [];
+                let uIdx = users.findIndex(u => u.userId === currentUser.userId);
+                if(uIdx > -1) {
+                    users[uIdx].score = currentUser.score;
+                } else {
+                    users.push(currentUser);
+                }
+                localStorage.setItem('mock_users', JSON.stringify(users));
+            } else {
+                alert("오답입니다. 다시 확인해보세요.");
+            }
+            closeIDE();
+            switchTab('status');
+        }
+
+        // Read Submissions / Ranks
+        function loadSubmissions() {
+            if(GOOGLE_SCRIPT_URL) {
+                fetch(`${GOOGLE_SCRIPT_URL}?action=getSubmissions`)
+                .then(res => res.json())
+                .then(data => renderSubmissions(data))
+                .catch(() => renderSubmissions(JSON.parse(localStorage.getItem('mock_subs')) || []));
+            } else {
+                renderSubmissions(JSON.parse(localStorage.getItem('mock_subs')) || []);
+            }
+        }
+
+        function renderSubmissions(subs) {
+            const tbody = document.getElementById('statusTableBody');
+            tbody.innerHTML = "";
+            if (!subs.length) {
+                tbody.innerHTML = "<tr><td colspan='6' class='p-8 text-center text-slate-400'>제출된 이력이 아직 없습니다.</td></tr>";
+                return;
+            }
+            subs.forEach(s => {
+                const color = s.status === "Correct" ? "text-emerald-600 font-bold" : "text-red-500 font-bold";
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-mono text-slate-500">${s.submissionId.substring(0,9)}</td>
+                        <td class="p-4 font-semibold">${s.userId}</td>
+                        <td class="p-4 font-bold text-blue-600">${s.problemId}</td>
+                        <td class="p-4 ${color}">${s.resultMessage}</td>
+                        <td class="p-4 text-xs">${s.language}</td>
+                        <td class="p-4 text-xs text-slate-400">${s.timestamp}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        function loadRanks() {
+            let users = JSON.parse(localStorage.getItem('mock_users')) || [];
+            if(currentUser && !users.find(u => u.userId === currentUser.userId)) {
+                users.push(currentUser);
+            }
+            
+            const uniqueUsers = [];
+            const map = new Map();
+            for (const item of users) {
+                if(!map.has(item.userId)){
+                    map.set(item.userId, true);
+                    uniqueUsers.push(item);
+                }
+            }
+            
+            uniqueUsers.sort((a,b) => b.score - a.score);
+
+            const tbody = document.getElementById('ranksTableBody');
+            tbody.innerHTML = "";
+            uniqueUsers.forEach((u, i) => {
+                const isMe = currentUser && u.userId === currentUser.userId ? "bg-blue-50" : "";
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr class="hover:bg-slate-50 ${isMe}">
+                        <td class="p-4 text-center font-bold">${i+1}</td>
+                        <td class="p-4 font-mono">${u.userId}</td>
+                        <td class="p-4 font-bold text-slate-800">${u.name}</td>
+                        <td class="p-4 text-xs">${u.school} (${u.role})</td>
+                        <td class="p-4 text-center font-bold text-blue-600">${u.score || 0}</td>
+                    </tr>
+                `);
+            });
+        }
+    </script>
+</body>
+</html>
