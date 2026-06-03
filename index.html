@@ -356,8 +356,7 @@
                         <button onclick="promoteToAdmin()" class="bg-purple-600 text-white px-4 py-2 rounded text-sm font-bold hover:bg-purple-700 transition">관리자 지정</button>
                     </div>
                 </div>
-            </div> ```
-                </div>
+
                 <div class="relative">
                     <button onclick="copyGasCode()" class="absolute right-2 top-2 text-[11px] bg-slate-700 text-white px-2 py-1 rounded font-bold">전체코드 복사</button>
                     <pre class="bg-slate-900 text-emerald-400 p-4 rounded-xl font-mono text-[11px] overflow-x-auto max-h-64" id="gasCodeTemplate">
@@ -397,6 +396,15 @@ function doGet(e) {
         list.push({ submissionId: data[i][0], timestamp: data[i][1], userId: data[i][2], problemId: data[i][3], language: data[i][4], status: data[i][6], resultMessage: data[i][7] });
       }
     }
+   if (action === "getRanks") {
+     var sheet = ss.getSheetByName("users");
+     var data = sheet.getDataRange().getValues();
+     var list = [];
+     if(data.length > 1) {
+       for (var i = 1; i < data.length; i++) {
+         list.push({ userId: data[i][0], school: data[i][2], role: data[i][3], name: data[i][4], score: data[i][5] });
+       }
+     }
     return ContentService.createTextOutput(JSON.stringify(list)).setMimeType(ContentService.MimeType.JSON);
   }				
 }
@@ -444,6 +452,17 @@ function doPost(e) {
              break;
           }
        }
+    }
+if (action === "changeRole") {
+    var sheet = ss.getSheetByName("users");
+    var data = sheet.getDataRange().getValues();
+    var success = false;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] == params.targetUserId) {
+        sheet.getRange(i + 1, 4).setValue(params.newRole); // 4번째 열(role)을 '관리자'로 변경
+        success = true;
+        break;
+      }
     }
     return ContentService.createTextOutput(JSON.stringify({success: true})).setMimeType(ContentService.MimeType.JSON);
   }
@@ -855,8 +874,6 @@ function promoteToAdmin() {
                 callGAS(payload)
                 .then(data => {
                     if (data.success) {
-                        currentUser.score += (status === "Correct" ? 10 : 0);
-                        localStorage.setItem("logged_in_user", JSON.stringify(currentUser));
                         updateAuthUI();
                     }
                     handleSubmitResult(status, payload);
@@ -953,7 +970,7 @@ function promoteToAdmin() {
                 }
 
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 구글 서버 응답 제한 시간을 10초로 넉넉하게 조정
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 구글 서버 응답 제한 시간을 10초로 넉넉하게 조정
 
                 fetch(targetUrl, { signal: controller.signal })
                 .then(res => {
