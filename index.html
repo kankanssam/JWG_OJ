@@ -843,7 +843,7 @@ function promoteToAdmin() {
             
             document.getElementById('testOutputPanel').classList.add('hidden');
             document.getElementById('workspaceModal').classList.remove('translate-x-full');
-            document.getElementById('codeEditor').value = `# ${currentUser.school} ${currentUser.name} 학생 답안 작성\n# 예시 입력: ${p.sampleInput}\n\n`;
+            document.getElementById('codeEditor').value = `# 정답 코드를 아래에 작성하시오.\n\n`;
         }
         function closeIDE() { document.getElementById('workspaceModal').classList.add('translate-x-full'); }
 
